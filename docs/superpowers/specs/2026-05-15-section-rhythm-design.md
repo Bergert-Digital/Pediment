@@ -51,29 +51,50 @@ preset and touching nothing else. All approved requirements are still met.
 Trade-off accepted: the section gap is a literal value in one rule rather than a
 reusable named token. Acceptable because it is used in exactly one place.
 
-### Change 1 — Section gap
+### Corrected assumption (post-implementation, 2026-05-15)
 
-Append to the existing `theme.json` › `styles.css` string a rule that applies a
-large fluid top margin between the direct children of post content (the section
-boundaries), leaving the global `blockGap` (~1.5rem) intact for rhythm *within*
-a section.
+The original Change 1 below assumed *every top-level child of post-content is a
+section*, so it gave `> * + *` the large gap. This is false for real AI output:
+the model does **not** wrap prose in `starter/prose`. It emits bare
+`core/heading` / `core/paragraph` / `core/list` as flat top-level siblings
+intermixed with `starter/*` blocks. `> * + *` then put the 6rem gap between every
+paragraph and list, blowing apart intra-section content. Confirmed by DOM
+reproduction in wp-env.
+
+There is no DOM wrapper marking a section, but the custom `starter/*` blocks
+(hero, cta, faq, pull-quote, prose, contact-form) and `core/separator` **are**
+the real section boundaries; bare `core/*` blocks are intra-section content.
+Decision (user-confirmed): scope the large gap to those section signals only;
+bare content runs flow at the normal tight `blockGap`. A bare run sandwiched
+between two starter sections reads as one section (tight internals, 6rem
+above/below). A page of pure bare prose flows at normal rhythm — acceptable, that
+is normal body-copy reading, not the original "cramped sections" complaint.
+
+### Change 1 — Section gap (corrected)
+
+Append to `theme.json` › `styles.css` a rule applying the large fluid top margin
+only at section signals: a top-level `starter/*` block or `core/separator`, and
+the element immediately following one. Global `blockGap` (~1.5rem) is untouched,
+so bare content flows tight.
 
 ```css
-.entry-content.wp-block-post-content > * + *{
+.entry-content.wp-block-post-content > :where([class*="wp-block-starter-"], .wp-block-separator):not(:first-child),
+.entry-content.wp-block-post-content > :where([class*="wp-block-starter-"], .wp-block-separator) + *{
   margin-block-start: clamp(3.25rem, 2rem + 6vw, 6rem);
 }
 ```
 
-- `clamp(3.25rem, 2rem + 6vw, 6rem)` → 6rem at desktop widths, ~3.25rem on
-  narrow mobile (~46% compression), fluid in between.
-- `* + *` leaves the first section with no extra top margin (the header
-  template part already provides separation).
-- **Selector is provisional.** `wp:post-content` wrapper markup varies by WP
-  version. Implementation MUST inspect the rendered DOM in wp-env and confirm
-  the actual wrapper/child relationship, adjusting the selector if needed
-  (candidates: `.entry-content.wp-block-post-content > * + *`, or
-  `main.wp-block-group > .entry-content > * + *`). The intent is fixed: large
-  gap between top-level page sections only, never nested content.
+- `clamp(3.25rem, 2rem + 6vw, 6rem)` → 6rem desktop, ~3.25rem narrow mobile,
+  fluid between.
+- `:not(:first-child)` keeps the first section flush (header part provides top
+  separation).
+- `> S + *` puts the gap *after* a section/separator (covers bare content
+  starting a new logical section, and section-after-section).
+- Separator is part of `S`: its own `:not(:first-child)` margin is overridden to
+  0 by Change 2, so a neutralized separator contributes a single ~6rem gap via
+  the `S + *` rule on the following element — no doubling.
+- `.entry-content.wp-block-post-content` wrapper confirmed by DOM inspection in
+  wp-env (WP renders post-content's top-level blocks as its direct children).
 
 ### Change 2 — Neutralize separators
 
@@ -103,14 +124,18 @@ injected with high specificity; this rule must win unconditionally.
 
 1. `theme.json` is valid JSON and the `styles.css` string parses (load site, no
    CSS console/PHP errors).
-2. In wp-env, open the generated coffee-shop landing page:
+2. **Fixture must be representative of real AI output** — bare `core/heading`
+   /`core/paragraph`/`core/list` at top level intermixed with `starter/*`
+   blocks, NOT everything pre-wrapped in `starter/prose`. Verifying against a
+   fully prose-wrapped page is what hid the original defect. In wp-env, open
+   such a page and confirm:
    - No horizontal rules anywhere.
-   - ~6rem between sections at desktop width; intra-section paragraph spacing
-     unchanged (~1.5rem).
+   - ~6rem gap before/after each `starter/*` section and at each (neutralized)
+     separator at desktop width.
+   - A run of bare `core/*` blocks between two sections stays tightly grouped
+     (~1.5rem `blockGap`), NOT 6rem apart.
    - Narrow the viewport to mobile: section gap compresses to ~3.25rem, layout
      not cramped.
-   - Confirm via devtools that Change 1's selector matches the real post-content
-     children and does not leak into nested blocks.
 3. Open a hand-built pattern page ([patterns/hero-cta-faq.php](../../../patterns/hero-cta-faq.php))
    and confirm no regression to section or internal spacing.
 4. `npm run lint:colors` and existing lint tasks still pass (no new violations;
