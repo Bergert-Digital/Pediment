@@ -19,12 +19,31 @@ generator, so the theme spaces real boundaries instead of guessing.
 2. **Reliability:** prompt guidance **plus** a deterministic normalizer. The
    prompt is a nudge; the normalizer is the guarantee (do not trust unenforced
    LLM behavior — the lesson from the reverted cycles).
-3. **Boundary signal:** `core/separator`, **consumed**. Each separator-delimited
-   run of ungrouped top-level blocks becomes one section group; separators are
-   removed (the group *is* the boundary). Already-grouped blocks pass through.
+3. **Boundary signal:** two self-delimiting boundaries, both consumed or
+   standalone: (a) `core/separator` — removed; (b) an already-correct section
+   group (`core/group.starter-section`) — kept as-is, and itself terminates any
+   preceding ungrouped run. Each maximal run of other top-level blocks between
+   boundaries becomes one section group.
+
+   > **Correction 2026-05-16:** the original wording — "already-grouped blocks
+   > pass through", with a separator-*only* partition — collapsed the prompt's
+   > *preferred* output (every section wrapped in a group, no separators) into a
+   > single parent wrap (observed: a 7-block page → one nested group). A section
+   > group must be a partition boundary, not merely pass-through, or the
+   > "idempotent / correct groups preserved" property below does not hold.
 4. **Section markup:** `core/group` with `tagName=section`,
-   `className=starter-section`, **flow** layout (full-width; section manages no
-   inner width constraint itself).
+   `className=starter-section`, `align=full`, **flow** layout (`layout.type =
+   default`); the section manages no inner width constraint itself.
+
+   > **Correction 2026-05-16:** "flow layout (full-width)" alone is wrong. The
+   > theme wraps `wp:post-content` in a `constrained` layout group, so a flow
+   > `core/group` with no alignment is clamped to `contentSize` (720px) — the
+   > observed not-full-width symptom. `align=full` is what opts the section out
+   > of the content-width cap; the Component D
+   > `:where(:not(.alignfull):not(.alignwide))` rule (already written that way)
+   > then re-constrains *inner* content. The model schema cannot express
+   > `align`, so per Decision 2 the **normalizer enforces it** (on both wrapped
+   > runs and kept model groups; extra model attrs preserved).
 5. **Separator CSS:** the shipped `.wp-block-separator` margin rule
    (commit `2d5003c`) is **removed** in this work.
 6. **Scope:** applies at generation/edit-turn time via the editor. Existing
@@ -92,22 +111,34 @@ block order.
 Algorithm:
 
 1. Read root top-level blocks in order.
-2. Partition into segments split on `core/separator` blocks.
-3. For each segment:
-   - empty (leading/trailing/consecutive separators) → skip.
-   - exactly one block that is a `core/group` whose `className` includes
-     `starter-section` → keep as-is (idempotent).
-   - otherwise → create `core/group` with attributes
-     `{ tagName:'section', className:'starter-section', layout:{type:'default'} }`
-     and the segment's blocks as `innerBlocks`.
-4. Remove all top-level `core/separator` blocks.
+2. Walk the list, accumulating a *pending run* of non-boundary blocks.
+3. On each block:
+   - `core/separator` → consumed boundary: flush the pending run, drop the
+     separator.
+   - `core/group` whose `className` includes `starter-section` →
+     self-delimiting section: flush the pending run, then keep this group
+     (idempotent; no re-wrap) — but **enforce the section shape** on it:
+     re-emit with `tagName=section`, `align=full`, `layout.type=default`,
+     `starter-section` retained in `className`; any other model attributes
+     (background, spacing, …) and its children are preserved. (Verbatim
+     pass-through is wrong: model groups lack `align=full` — schema can't
+     express it — and would render clamped to 720px.)
+   - otherwise → append its index to the pending run.
+
+   At end-of-list, flush the pending run. A flushed **non-empty** run becomes
+   one `core/group`
+   `{ tagName:'section', align:'full', className:'starter-section', layout:{type:'default'} }`
+   wrapping the run's blocks; an **empty** run (leading/trailing/consecutive
+   boundaries) is skipped.
+4. Remove all top-level `core/separator` blocks (consumed at step 3).
 5. Replace root order with the resulting section groups (via
    `core/block-editor` dispatch — `createBlock('core/group', attrs, inner)` +
    `replaceBlocks`/`insertBlocks` + `removeBlocks`, consistent with existing
    `createBlockFromSpec`).
 
 Properties: deterministic (depends only on the block list), idempotent
-(re-running / edit-turns on already-grouped pages are no-ops, no nested
+(re-running / edit-turns on already-grouped pages — **including multiple
+adjacent correct groups with no separators** — are no-ops; no nested
 double-wrap), model-cooperative (correct groups preserved).
 
 Non-goal: nested section detection, heading-based splitting, migrating
@@ -144,7 +175,9 @@ section.starter-section > :where(:not(.alignfull):not(.alignwide)){max-width:var
   `allowsInnerBlocks === true`.
 - TS unit for the normalizer (pure over a block-list fixture): separator runs
   → one `starter-section` group each; separators removed; existing correct
-  groups untouched; no-separator body → single section; output re-run is a
+  groups untouched and each kept as its own section (incl. multiple adjacent
+  groups, and a group ending a preceding ungrouped run, with no separators); a
+  no-separator body of *ungrouped* blocks → single section; output re-run is a
   no-op (idempotent).
 - Update affected mock-fixture / structure tests in wp-starter-ai.
 - `npm run lint` (both repos) / PHP lint pass.
