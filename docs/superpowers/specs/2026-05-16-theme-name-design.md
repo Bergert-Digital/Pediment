@@ -29,9 +29,9 @@ A *pediment* is the triangular gable crowning a classical portico/temple front �
 formal architectural "cap" of the structure. It signals classical gravitas and
 craftsmanship, fitting agencies pitching consultancies and SMEs.
 
-- **Domains (all `.com`, all free):** `pedimenttheme.com`, `pedimentwp.com`,
-  `usepediment.com`. Exact `pediment.com` is taken (generic word, not enforceable
-  against an unrelated product on a variant domain); brand operates on a variant.
+- **Domain — registered:** **`pedimenttheme.com`** (purchased 2026-05-17). Exact
+  `pediment.com` is taken (generic word, not enforceable against an unrelated product
+  on a variant domain); the brand operates on the registered variant.
 - **Namespace/trademark — clean:** No WordPress theme named "Pediment" (on
   WordPress.org or ThemeForest). No software/CMS product named "Pediment" surfaced.
   Minor non-conflicting homonym: "pediment" is also a geology term (a bedrock erosion
@@ -88,6 +88,6 @@ Open decisions for the plan:
 - **Slug:** `pediment` for text domain / theme folder (confirm no WP-core clash).
 - **Repo / Composer package:** keep `bergert/wp-starter-theme` or rename to
   `bergert/pediment`? (Renaming the GitHub repo affects existing remotes/links.)
-- **Domain to register:** `pedimenttheme.com` (recommended primary) vs `pedimentwp.com`.
+- ~~Domain to register~~ — resolved: `pedimenttheme.com` (registered 2026-05-17).
 
 These are resolved during planning, not here.
