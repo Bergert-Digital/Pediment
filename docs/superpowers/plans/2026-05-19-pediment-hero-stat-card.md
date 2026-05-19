@@ -1,20 +1,20 @@
-# Pediment Hero — Stat-Card Variant (Plan 5)
+# Pediment Hero — Stat-Card Variant + Fork-Friendly Variant Filter (Plan 5)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans. Steps use checkbox (`- [ ]`).
 
-**Goal:** Add a `stat-card` variant to `starter/hero` matching the locked mockup hero: two-column split — left = eyebrow chip + headline + lead + primary & secondary pill buttons + trust ticks; right = a photo card with a frosted-glass stat overlay (big value + sub-line + 3-metric row). Existing `default`/`centered`/`media-bg` variants stay byte-identical.
+**Goal:** Add a `stat-card` variant to `starter/hero` (mockup split hero: eyebrow chip + headline + lead + primary/secondary pill buttons + trust ticks | photo card with frosted-glass stat overlay). **And** make the parent opinionated-but-fork-friendly: the hero variant list flows through an `apply_filters( 'starter_hero_variants', … )` extension point so a child theme removes a variant (e.g. `stat-card`) with one line of PHP — no block fork. Existing `default`/`centered`/`media-bg` variants stay byte-identical.
 
-**Architecture:** Extend the existing block — add one enum value (`stat-card`) + new attributes (`eyebrow`, `secondaryText`, `secondaryUrl`, `ticks[]`, `statValue`, `statText`, `metrics[]`; reuse existing `mediaId` for the photo). `render.php` branches: `if 'stat-card' === $variant` → new split markup; **else → the existing markup, unchanged byte-for-byte** (so the 3 behavioral HeroTest cases keep passing). `edit.tsx` gains the variant option + InspectorControls for the new structured fields. `style.scss` appends a `.is-variant-stat-card` block (existing rules untouched). The pre-existing `HeroTest` anti-phantom-variant guard (`test_block_json_variant_enum_excludes_split`) is updated to the new exact enum **and** keeps its intent by additionally asserting `stat-card` actually renders distinct markup.
+**Architecture:** Extend the block — one enum value (`stat-card`) + new attributes. The canonical variant list lives in a tiny parent helper `starter_hero_variants()` (`inc/hero-variants.php`, required from `functions.php`, mirroring the `inc/icons.php`/`inc/block-styles.php` pattern) returning `apply_filters( 'starter_hero_variants', [ 'default','centered','media-bg','stat-card' ] )`. **render.php is authoritative**: it normalizes an unknown/filtered-out variant to `default` (so removing `stat-card` via the filter makes any stat-card hero render the default markup). The editor reflects the filter via a `window.starterHeroVariants` global (parent prints it on `enqueue_block_editor_assets`); `edit.tsx` builds its SelectControl from that global with a hard-coded fallback. `block.json` keeps the full shipped enum (the superset the parent ships; the filter is a runtime opt-out, not a block.json change — so the existing HeroTest enum guard stays valid). render.php's non-stat-card path stays byte-identical so the 3 behavioral tests keep passing.
 
 **Tech Stack:** WordPress FSE block theme, apiVersion 3, `@wordpress/scripts` (TS/SCSS), PHP 8.1, PHPUnit (wp-env).
 
-**Spec:** `docs/superpowers/specs/2026-05-17-pediment-design-system-design.md` (hero photo + frosted-stats overlay). Visual ref: `docs/design/pediment-mockup.html` (the `.hero` / `.hero-fig` / `.glass` section). Builds on merged Plans 1–4 (tokens, `.chip` utility, `--r-*`/`--section`, `accent-tint`).
+**Spec:** `docs/superpowers/specs/2026-05-17-pediment-design-system-design.md` (hero photo + frosted-stats overlay). Visual ref: `docs/design/pediment-mockup.html` (`.hero`/`.hero-fig`/`.glass`). Builds on merged Plans 1–4 (tokens, `.chip`, `--r-*`/`--section`, `accent-tint`, the `inc/` + `functions.php`-require convention). Architecture decision (recorded): the parent ships the opinionated Pediment look as default; this plan adds the fork-friendly opt-out hook that decision implies.
 
-**Scope:** ONLY `src/blocks/hero/*` + `tests/phpunit/BlockRender/HeroTest.php`. NOT here: pull-quote→testimonial (Plan 6), blog-index→Insights (Plan 7). No new JS/view-script. Do not touch other blocks, parts, theme.json, registration, or any `mega-*`.
+**Scope:** `src/blocks/hero/*`, `tests/phpunit/BlockRender/HeroTest.php`, plus the extension-point infra `inc/hero-variants.php` + a one-line `functions.php` require. NOT here: pull-quote→testimonial (Plan 6), blog-index→Insights (Plan 7), child-theme.json reconciliation (separate). No other blocks/parts/theme.json/registration/`mega-*`.
 
-**Pre-existing test contract (must honor):** `HeroTest::test_block_json_variant_enum_excludes_split` asserts `enum === ['default','centered','media-bg']` (guard: no advertised variant the renderer doesn't produce). Adding `stat-card` requires updating this test to the new exact array **and** adding a render assertion proving `stat-card` produces distinct output (keeps the original intent). `test_block_json_description_does_not_mention_split` must keep passing — the new description must mention the stat-card variant but NEVER the word "split". The 3 behavioral tests (`renders_headline_and_subheadline`, `renders_variant_class`, `omits_cta_when_url_is_empty`) must stay green ⇒ the non-stat-card render path stays byte-identical.
+**Pre-existing test contract:** `HeroTest::test_block_json_variant_enum_excludes_split` asserts `enum === ['default','centered','media-bg']` (anti-phantom guard). Adding `stat-card` requires updating it to the new exact enum AND keeping its intent (every shipped variant must render) — done via `test_block_json_variant_enum_is_exact_and_renderable`. `test_block_json_description_does_not_mention_split` must stay green (new description mentions stat-card, never "split"). The 3 behavioral tests must stay green ⇒ non-stat-card render path byte-identical.
 
-**Verification constraint:** Worktree NOT mounted in wp-env. Per task: env-independent gates — `npm run build` (compiles TS/SCSS), `php -l render.php`, valid `block.json` JSON, SCSS brace-balance, and a static trace of every HeroTest method against the render.php you ship. Full PHPUnit runs POST-MERGE in `:8888`/`:8889`. **Definition of done: post-merge PHPUnit green (all HeroTest incl. new stat-card cases + the rest of the suite); `npm run build` clean.**
+**Verification constraint:** Worktree NOT mounted in wp-env. Per task: env-independent gates — `npm run build`, `php -l`, valid `block.json` JSON, SCSS brace-balance, static trace of every HeroTest method against the shipped render.php. Full PHPUnit POST-MERGE in `:8888`/`:8889`. **Definition of done: post-merge PHPUnit green (all HeroTest incl. stat-card + filter cases + the rest); `npm run build` clean.**
 
 ---
 
@@ -23,9 +23,11 @@
 | File | Action |
 |---|---|
 | `src/blocks/hero/block.json` | Modify — enum + new attributes + description |
-| `tests/phpunit/BlockRender/HeroTest.php` | Modify — update enum guard, keep 3 behavioral, add stat-card cases |
-| `src/blocks/hero/render.php` | Modify — add `stat-card` branch; else byte-identical |
-| `src/blocks/hero/edit.tsx` | Modify — variant option + inspector fields |
+| `tests/phpunit/BlockRender/HeroTest.php` | Modify — enum guard, keep 3 behavioral, add stat-card + filter cases |
+| `inc/hero-variants.php` | Create — `starter_hero_variants()` + editor global |
+| `functions.php` | Modify — one-line require of `inc/hero-variants.php` |
+| `src/blocks/hero/render.php` | Modify — filter-normalize variant; add `stat-card` branch; else byte-identical |
+| `src/blocks/hero/edit.tsx` | Modify — variant options from filter global + inspector fields |
 | `src/blocks/hero/style.scss` | Modify — append `.is-variant-stat-card` rules |
 | `src/blocks/hero/index.tsx` | Unchanged |
 
@@ -33,7 +35,7 @@ Each task commits.
 
 ---
 
-### Task 1: block.json attributes + HeroTest contract
+### Task 1: block.json attributes + HeroTest contract (incl. filter test)
 
 **Files:** Modify `src/blocks/hero/block.json`; Modify `tests/phpunit/BlockRender/HeroTest.php`.
 
@@ -73,9 +75,9 @@ Each task commits.
 	"render": "file:./render.php"
 }
 ```
-(Indentation/quoting matches the existing file: tabs, the two-space-indented `"style"` line preserved exactly as in the original.)
+(Tabs + the two-space-indented `"style"` line preserved exactly as the original.)
 
-- [ ] **Step 2: Update `tests/phpunit/BlockRender/HeroTest.php`** — keep the `render()` helper and the 3 behavioral tests (`test_renders_headline_and_subheadline`, `test_renders_variant_class`, `test_omits_cta_when_url_is_empty`) EXACTLY as they are. Replace the method `test_block_json_variant_enum_excludes_split` with the renamed/updated guard below, KEEP `test_block_json_description_does_not_mention_split` as-is, and ADD the four new stat-card tests. The full new tail of the class (everything from `test_block_json_variant_enum_excludes_split` onward) becomes EXACTLY:
+- [ ] **Step 2: Update `tests/phpunit/BlockRender/HeroTest.php`** — keep the `render()` helper and the 3 behavioral tests (`test_renders_headline_and_subheadline`, `test_renders_variant_class`, `test_omits_cta_when_url_is_empty`) EXACTLY as-is. Replace `test_block_json_variant_enum_excludes_split` with the updated guard, KEEP `test_block_json_description_does_not_mention_split`, and ADD the stat-card + filter cases. The full new tail of the class (from `test_block_json_variant_enum_excludes_split` onward) becomes EXACTLY:
 ```php
 	public function test_block_json_variant_enum_is_exact_and_renderable() {
 		$path = dirname( __DIR__, 3 ) . '/src/blocks/hero/block.json';
@@ -85,9 +87,8 @@ Each task commits.
 		$this->assertSame(
 			array( 'default', 'centered', 'media-bg', 'stat-card' ),
 			$data['attributes']['variant']['enum'],
-			'block.json variant enum must list exactly the variants the renderer produces'
+			'block.json variant enum must list exactly the variants the renderer ships'
 		);
-		// Anti-phantom guard: the newly advertised variant must render distinctly.
 		$html = $this->render( array( 'variant' => 'stat-card', 'headline' => 'X' ) );
 		$this->assertStringContainsString( 'is-variant-stat-card', $html );
 	}
@@ -168,23 +169,120 @@ Each task commits.
 		$this->assertStringNotContainsString( 'starter-hero__glass', $html );
 		$this->assertStringNotContainsString( 'starter-hero__eyebrow', $html );
 	}
+
+	public function test_starter_hero_variants_filter_is_default_superset() {
+		$this->assertTrue( function_exists( 'starter_hero_variants' ) );
+		$this->assertSame(
+			array( 'default', 'centered', 'media-bg', 'stat-card' ),
+			starter_hero_variants()
+		);
+	}
+
+	public function test_filter_removing_stat_card_falls_back_to_default() {
+		$cb = static function ( $variants ) {
+			return array_values( array_diff( $variants, array( 'stat-card' ) ) );
+		};
+		add_filter( 'starter_hero_variants', $cb );
+		try {
+			$html = $this->render(
+				array(
+					'variant'   => 'stat-card',
+					'headline'  => 'H',
+					'statValue' => '+34%',
+				)
+			);
+			$this->assertStringContainsString( 'is-variant-default', $html );
+			$this->assertStringNotContainsString( 'is-variant-stat-card', $html );
+			$this->assertStringNotContainsString( 'starter-hero__glass', $html );
+		} finally {
+			remove_filter( 'starter_hero_variants', $cb );
+		}
+	}
 ```
 
-- [ ] **Step 3: Verify (env-independent)** — `python3 -c "import json;json.load(open('src/blocks/hero/block.json'));print('JSON-OK')"`; confirm enum is exactly the 4 values and description contains "stat-card" and NOT "split"; `php -l tests/phpunit/BlockRender/HeroTest.php`; `npm run build` still compiles. `git diff` touches only those 2 files.
+- [ ] **Step 3: Verify (env-independent)** — `python3 -c "import json;json.load(open('src/blocks/hero/block.json'));print('JSON-OK')"`; enum is exactly the 4 values, description has "stat-card" and not "split"; `php -l tests/phpunit/BlockRender/HeroTest.php`; `npm run build` compiles. (Two new tests reference `starter_hero_variants()` / the filter behavior — they go green once Tasks 2 & 3 land; that's expected TDD. The 3 behavioral + description tests stay green now.) Only those 2 files changed.
 
 - [ ] **Step 4: Commit**
 ```bash
 git add src/blocks/hero/block.json tests/phpunit/BlockRender/HeroTest.php
-git commit -m "feat(hero): block.json stat-card variant + HeroTest contract"
+git commit -m "feat(hero): block.json stat-card variant + HeroTest (incl. filter)"
 ```
 
 ---
 
-### Task 2: render.php — stat-card branch
+### Task 2: `starter_hero_variants()` extension point
+
+**Files:** Create `inc/hero-variants.php`; Modify `functions.php`.
+
+- [ ] **Step 1: Create `inc/hero-variants.php` with EXACTLY:**
+```php
+<?php
+/**
+ * Hero variant registry — the fork-friendly extension point.
+ *
+ * The parent ships an opinionated set of hero variants. A child theme can
+ * remove one with a single line, e.g.:
+ *
+ *   add_filter( 'starter_hero_variants', fn( $v ) => array_diff( $v, [ 'stat-card' ] ) );
+ *
+ * render.php normalizes any variant not in this list to "default", and the
+ * block editor only offers the filtered list.
+ *
+ * @package Starter
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * The allowed hero variants (filterable).
+ *
+ * @return string[] Re-indexed list of variant slugs.
+ */
+function starter_hero_variants() {
+	$defaults = array( 'default', 'centered', 'media-bg', 'stat-card' );
+	$variants = apply_filters( 'starter_hero_variants', $defaults );
+	$variants = is_array( $variants ) ? array_values( array_filter( array_map( 'strval', $variants ) ) ) : $defaults;
+	if ( ! in_array( 'default', $variants, true ) ) {
+		array_unshift( $variants, 'default' );
+	}
+	return $variants;
+}
+
+/**
+ * Expose the filtered variant list to the block editor so the Hero
+ * inspector only offers variants the site actually ships.
+ */
+add_action(
+	'enqueue_block_editor_assets',
+	function () {
+		wp_add_inline_script(
+			'wp-blocks',
+			'window.starterHeroVariants = ' . wp_json_encode( starter_hero_variants() ) . ';',
+			'after'
+		);
+	}
+);
+```
+
+- [ ] **Step 2: Modify `functions.php`** — add `require_once __DIR__ . '/inc/hero-variants.php';` directly after the existing `require_once __DIR__ . '/inc/block-styles.php';` line (match that exact idiom/placement; read the file first). Change nothing else.
+
+- [ ] **Step 3: Verify** — `php -l inc/hero-variants.php && php -l functions.php`; `npm run build` unaffected. `git diff functions.php` shows ONLY the one added require line (addition-only). Static-trace `test_starter_hero_variants_filter_is_default_superset`: with no filter, `starter_hero_variants()` returns exactly `['default','centered','media-bg','stat-card']` (defaults, array_values, 'default' already present) ⇒ passes. `wp-blocks` is a core editor script handle always present in the block editor; `wp_add_inline_script(...,'after')` runs before block edit components ⇒ `window.starterHeroVariants` defined for edit.tsx. Only the 2 files changed.
+
+- [ ] **Step 4: Commit**
+```bash
+git add inc/hero-variants.php functions.php
+git commit -m "feat(hero): starter_hero_variants() filter + editor global"
+```
+
+---
+
+### Task 3: render.php — filter-normalize + stat-card branch
 
 **Files:** Modify `src/blocks/hero/render.php`.
 
-The existing variable extraction + the default/centered/media-bg markup must stay byte-identical (wrap it in an `else`). Add a `stat-card` branch above it.
+Normalize the variant against `starter_hero_variants()` BEFORE building wrapper attributes/branching. The existing default/centered/media-bg markup stays byte-identical (wrapped in `else`). Add the `stat-card` branch.
 
 - [ ] **Step 1: Replace `src/blocks/hero/render.php` with EXACTLY:**
 ```php
@@ -202,6 +300,13 @@ $cta_text    = isset( $attributes['ctaText'] ) ? (string) $attributes['ctaText']
 $cta_url     = isset( $attributes['ctaUrl'] ) ? (string) $attributes['ctaUrl'] : '';
 $media_id    = isset( $attributes['mediaId'] ) ? (int) $attributes['mediaId'] : 0;
 
+$allowed = function_exists( 'starter_hero_variants' )
+	? starter_hero_variants()
+	: array( 'default', 'centered', 'media-bg', 'stat-card' );
+if ( ! in_array( $variant, $allowed, true ) ) {
+	$variant = 'default';
+}
+
 $wrapper_attributes = get_block_wrapper_attributes(
 	array(
 		'class' => 'starter-hero is-variant-' . sanitize_html_class( $variant ),
@@ -209,13 +314,13 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 
 if ( 'stat-card' === $variant ) {
-	$eyebrow     = isset( $attributes['eyebrow'] ) ? (string) $attributes['eyebrow'] : '';
-	$sec_text    = isset( $attributes['secondaryText'] ) ? (string) $attributes['secondaryText'] : '';
-	$sec_url     = isset( $attributes['secondaryUrl'] ) ? (string) $attributes['secondaryUrl'] : '';
-	$stat_value  = isset( $attributes['statValue'] ) ? (string) $attributes['statValue'] : '';
-	$stat_text   = isset( $attributes['statText'] ) ? (string) $attributes['statText'] : '';
-	$ticks       = ( isset( $attributes['ticks'] ) && is_array( $attributes['ticks'] ) ) ? $attributes['ticks'] : array();
-	$metrics     = ( isset( $attributes['metrics'] ) && is_array( $attributes['metrics'] ) ) ? $attributes['metrics'] : array();
+	$eyebrow    = isset( $attributes['eyebrow'] ) ? (string) $attributes['eyebrow'] : '';
+	$sec_text   = isset( $attributes['secondaryText'] ) ? (string) $attributes['secondaryText'] : '';
+	$sec_url    = isset( $attributes['secondaryUrl'] ) ? (string) $attributes['secondaryUrl'] : '';
+	$stat_value = isset( $attributes['statValue'] ) ? (string) $attributes['statValue'] : '';
+	$stat_text  = isset( $attributes['statText'] ) ? (string) $attributes['statText'] : '';
+	$ticks      = ( isset( $attributes['ticks'] ) && is_array( $attributes['ticks'] ) ) ? $attributes['ticks'] : array();
+	$metrics    = ( isset( $attributes['metrics'] ) && is_array( $attributes['metrics'] ) ) ? $attributes['metrics'] : array();
 
 	ob_start();
 	?>
@@ -309,19 +414,19 @@ ob_start();
 <?php
 echo ob_get_clean();
 ```
-(The block from `$bg_style = '';` onward is the original render verbatim — the only change is the inserted `if ( 'stat-card' === $variant ) { … return; }` branch above it, plus moving the new attribute reads inside that branch.)
+(Everything from `$bg_style = '';` onward is the original render verbatim. Net changes vs. original: the `$allowed`/normalize block, and the inserted `if ( 'stat-card' === $variant ) { … return; }` branch.)
 
-- [ ] **Step 2: Verify** — `php -l src/blocks/hero/render.php`; `npm run build`. Static-trace ALL HeroTest methods: the 3 behavioral + `test_default_variant_markup_unchanged` hit the else branch (markup identical to original ⇒ pass; no `__glass`/`__eyebrow`); `test_block_json_variant_enum_is_exact_and_renderable` stat-card render contains `is-variant-stat-card` (wrapper) ⇒ pass; `test_stat_card_renders_eyebrow_secondary_and_ticks` / `..._glass_stat_and_metrics` / `..._omits_secondary_when_url_missing` map to the new branch's classes/guards. Confirm each assertion. Only `render.php` changed.
+- [ ] **Step 2: Verify** — `php -l src/blocks/hero/render.php`; `npm run build`. Static-trace ALL HeroTest methods: 3 behavioral + `test_default_variant_markup_unchanged` → variant in default allowed list → unchanged else-branch markup (no `__glass`/`__eyebrow`) ⇒ pass; `test_block_json_variant_enum_is_exact_and_renderable` + the 3 stat-card tests → default filter includes `stat-card` → branch runs ⇒ pass; `test_filter_removing_stat_card_falls_back_to_default` → filter drops `stat-card` → not in `$allowed` → `$variant='default'` → else branch → `is-variant-default`, no `__glass` ⇒ pass; `test_starter_hero_variants_filter_is_default_superset` covered by Task 2. Only `render.php` changed.
 
 - [ ] **Step 3: Commit**
 ```bash
 git add src/blocks/hero/render.php
-git commit -m "feat(hero): stat-card render branch (split + glass stats)"
+git commit -m "feat(hero): filter-normalized variant + stat-card render branch"
 ```
 
 ---
 
-### Task 3: edit.tsx — variant option + inspector fields
+### Task 4: edit.tsx — variant options from filter global + inspector fields
 
 **Files:** Modify `src/blocks/hero/edit.tsx`.
 
@@ -359,6 +464,28 @@ type Attrs = {
 	mediaId: number;
 };
 
+const ALL_VARIANTS = [
+	'default',
+	'centered',
+	'media-bg',
+	'stat-card',
+] as const;
+const LABELS: Record< string, string > = {
+	default: 'Default',
+	centered: 'Centered',
+	'media-bg': 'Media BG',
+	'stat-card': 'Stat card',
+};
+
+function allowedVariants(): string[] {
+	const w = ( window as unknown as { starterHeroVariants?: unknown } )
+		.starterHeroVariants;
+	if ( Array.isArray( w ) && w.length ) {
+		return w.map( String );
+	}
+	return [ ...ALL_VARIANTS ];
+}
+
 export default function Edit( {
 	attributes,
 	setAttributes,
@@ -370,6 +497,10 @@ export default function Edit( {
 		className: `starter-hero is-variant-${ attributes.variant }`,
 	} );
 	const isStatCard = attributes.variant === 'stat-card';
+	const options = allowedVariants().map( ( v ) => ( {
+		label: LABELS[ v ] ?? v,
+		value: v,
+	} ) );
 
 	return (
 		<>
@@ -378,12 +509,7 @@ export default function Edit( {
 					<SelectControl
 						label={ __( 'Variant', 'starter' ) }
 						value={ attributes.variant }
-						options={ [
-							{ label: 'Default', value: 'default' },
-							{ label: 'Centered', value: 'centered' },
-							{ label: 'Media BG', value: 'media-bg' },
-							{ label: 'Stat card', value: 'stat-card' },
-						] }
+						options={ options }
 						onChange={ ( v ) =>
 							setAttributes( {
 								variant: v as Attrs[ 'variant' ],
@@ -546,12 +672,12 @@ export default function Edit( {
 - [ ] **Step 3: Commit**
 ```bash
 git add src/blocks/hero/edit.tsx
-git commit -m "feat(hero): editor controls for stat-card variant"
+git commit -m "feat(hero): editor variant options from starter_hero_variants + stat-card controls"
 ```
 
 ---
 
-### Task 4: style.scss — `.is-variant-stat-card`
+### Task 5: style.scss — `.is-variant-stat-card`
 
 **Files:** Modify `src/blocks/hero/style.scss` (APPEND only; existing rules untouched).
 
@@ -676,7 +802,7 @@ git commit -m "feat(hero): editor controls for stat-card variant"
 }
 ```
 
-- [ ] **Step 2: Verify** — `npm run build` compiles; SCSS brace-balanced (`node -e` count); `git diff` is append-only to `style.scss` (zero `-` lines; existing default/centered/media-bg rules byte-unchanged). Only `style.scss` changed.
+- [ ] **Step 2: Verify** — `npm run build` compiles; SCSS brace-balanced; `git diff` append-only to `style.scss` (zero `-` lines; default/centered/media-bg rules byte-unchanged). Only `style.scss` changed.
 
 - [ ] **Step 3: Commit**
 ```bash
@@ -686,24 +812,24 @@ git commit -m "style(hero): stat-card variant (split + frosted glass stats)"
 
 ---
 
-### Task 5: Build + cumulative guard
+### Task 6: Build + cumulative guard
 
 **Files:** none (verification only).
 
 - [ ] **Step 1:** `npm run build` — compiles; `build/blocks/hero/{block.json,index.js,style-index.css,render.php}` present.
-- [ ] **Step 2:** `git diff <branch-base>..HEAD --name-only` — ONLY `src/blocks/hero/{block.json,render.php,edit.tsx,style.scss}` + `tests/phpunit/BlockRender/HeroTest.php`. NO other blocks/parts/theme.json/inc/mega-*.
-- [ ] **Step 3:** `php -l src/blocks/hero/render.php`; `python3` JSON-validates block.json (enum exactly 4, description has "stat-card" not "split"); SCSS brace-balanced; `git diff` confirms render.php's post-`stat-card` section (from `$bg_style = '';`) byte-identical to the pre-Plan-5 original. `git status --porcelain` clean (besides pre-existing untracked `docs/images/`).
+- [ ] **Step 2:** `git diff <branch-base>..HEAD --name-only` — ONLY `src/blocks/hero/{block.json,render.php,edit.tsx,style.scss}`, `tests/phpunit/BlockRender/HeroTest.php`, `inc/hero-variants.php`, `functions.php`. NO other blocks/parts/theme.json/registration/`mega-*`.
+- [ ] **Step 3:** `php -l` on `render.php` + `inc/hero-variants.php` + `functions.php`; block.json valid JSON (enum exactly 4, "stat-card" in description, no "split"); SCSS brace-balanced; `functions.php` diff is the single added require; render.php's post-`stat-card` section (from `$bg_style = '';`) byte-identical to the pre-Plan-5 original. `git status --porcelain` clean (besides pre-existing untracked `docs/images/`).
 
-**Post-merge (main checkout `:8888`/`:8889`, controller — NOT a worktree step):** `npm run build` → `npx wp-env run cli wp theme activate wp-starter-theme` → full `vendor/bin/phpunit` (expect: all HeroTest green incl. the updated enum guard + 4 new stat-card cases + `test_default_variant_markup_unchanged`; rest of suite unchanged). Playwright unaffected (no e2e changes; the unrelated mega-menu failures stay out of scope).
+**Post-merge (main checkout `:8888`/`:8889`, controller — NOT a worktree step):** `npm run build` → `npx wp-env run cli wp theme activate wp-starter-theme` → full `vendor/bin/phpunit` (expect: all HeroTest green incl. the updated enum guard, 4 stat-card cases, `test_default_variant_markup_unchanged`, `test_starter_hero_variants_filter_is_default_superset`, `test_filter_removing_stat_card_falls_back_to_default`; rest of suite unchanged). Playwright unaffected (no e2e changes; unrelated mega-menu failures stay out of scope).
 
 ---
 
 ## Self-Review
 
-**Spec coverage:** hero photo + frosted-stats overlay delivered as a `stat-card` variant — block.json attrs + HeroTest contract (Task 1), render branch (Task 2), editor controls (Task 3), styles (Task 4), guard (Task 5). pull-quote→testimonial and blog-index→Insights are explicitly Plans 6 & 7 — not gaps.
+**Spec coverage:** hero photo + frosted-stats overlay as `stat-card` variant (Tasks 1,3,4,5); fork-friendly opt-out via `starter_hero_variants` filter authoritative in render + reflected in editor (Tasks 2,3,4); HeroTest contract incl. filter-removal fallback (Task 1); guard (Task 6). pull-quote→testimonial and blog-index→Insights are Plans 6 & 7 — not gaps. Architecture decision (opinionated parent + fork-friendly) directly realized by the filter.
 
-**Placeholder scan:** none — every block.json/php/tsx/scss/test block is complete and final.
+**Placeholder scan:** none — all code complete.
 
-**Type/name consistency:** New attrs (`eyebrow`,`secondaryText`,`secondaryUrl`,`ticks`,`statValue`,`statText`,`metrics`,`mediaId`) match across block.json ⇄ render.php reads ⇄ edit.tsx `Attrs` type/controls. Render BEM (`starter-hero__eyebrow/__col/__actions/__cta--secondary/__ticks/__tick/__fig/__img/__glass/__stat-value/__stat-text/__metrics/__metric`) match the appended SCSS selectors and the HeroTest assertions exactly. Enum `['default','centered','media-bg','stat-card']` identical in block.json and the updated `test_block_json_variant_enum_is_exact_and_renderable`. The non-stat-card render path (from `$bg_style`) is the verbatim original ⇒ the 3 behavioral tests + `test_default_variant_markup_unchanged` pass. `accent-tint`/`--r-pill`/`--r-lg`/`shadow--medium` are merged Plan-1/2 tokens; `color-mix` matches the Plan-3 frosted-header precedent.
+**Type/name consistency:** Filter name `starter_hero_variants` identical across `inc/hero-variants.php` (definition + `apply_filters`), render.php (`function_exists`/call), HeroTest (`function_exists`/`add_filter`/`assertSame`), and the editor global `window.starterHeroVariants` (PHP `wp_json_encode` ⇄ edit.tsx `allowedVariants()`), and the docblock one-liner example. New attrs match block.json ⇄ render.php ⇄ edit.tsx `Attrs`. Render BEM (`__eyebrow/__col/__actions/__cta--secondary/__ticks/__tick/__fig/__img/__glass/__stat-value/__stat-text/__metrics/__metric`) match appended SCSS + HeroTest assertions. Enum `['default','centered','media-bg','stat-card']` identical in block.json and `test_block_json_variant_enum_is_exact_and_renderable`; the filter (not block.json) is the runtime opt-out, so that guard stays valid. Non-stat-card render path (from `$bg_style`) verbatim original ⇒ 3 behavioral + `test_default_variant_markup_unchanged` pass; `test_filter_removing_stat_card_falls_back_to_default` exercises the new normalize block (filtered-out → 'default' → else branch). `require_once` placement mirrors the Plan-1/2 `inc/` convention.
 
-**Regression safety:** Only hero files + HeroTest changed (Task 5 Step 2 asserts) ⇒ all other blocks’ PHPUnit + e2e untouched. `test_block_json_variant_enum_is_exact_and_renderable` preserves the original anti-phantom intent (enum must equal what the renderer produces — now additionally proven by a live `stat-card` render assertion). Description keeps clear of "split" so `test_block_json_description_does_not_mention_split` stays green. SCSS is append-only so existing variants are visually unchanged.
+**Regression safety:** Changed set = hero block files + HeroTest + `inc/hero-variants.php` + one functions.php require (Task 6 Step 2 asserts) ⇒ other blocks' PHPUnit + all e2e untouched. SCSS append-only. The variant-normalize defaults to the full shipped set, so default behavior is unchanged; the filter only ever *narrows*, and render always falls back to `default` (guaranteed present via `starter_hero_variants()`'s `array_unshift` safeguard) so a mis-filter can't yield an unrenderable variant.
