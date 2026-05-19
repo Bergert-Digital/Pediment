@@ -51,9 +51,7 @@ Mirror `render.php`'s DOM so the shared `.starter-mega-link` grid lays it out
 correctly:
 
 - Inline wrapper `<div class="starter-mega-link">` containing, in render order:
-  - icon cell: live `<svg class="starter-mega-link__icon" aria-hidden="true"><use
-    href="#ph-{icon}"></use></svg>` when `icon` is set, else a placeholder element
-    with class `starter-mega-link__icon` (dashed box via editor.scss);
+  - icon cell: a **sprite-independent** affordance — the icon name as text when set, a dashed placeholder when empty. (The Phosphor sprite is printed only on `wp_body_open`/front-end; making it available in the editor is sub-project B. True rendered icon preview in the editor is deferred to B/C.)
   - `RichText` `__label` (label attribute);
   - `RichText` `__desc` (description attribute).
 - Move `url` into a `LinkControl` (or `URLInputButton`) and the icon name into a
@@ -123,3 +121,4 @@ All editor.scss colors/spacing use `var(--wp--preset--*)` tokens (palette-only p
 
 - Editor is a faithful *approximation*, not pixel-identical (no hover/Interactivity in
   the editor) — expected for a dropdown/overlay block.
+- The editor icon cell shows the icon *name*, not the rendered glyph (sprite is front-end-only; editor sprite availability is deferred sub-project B).
