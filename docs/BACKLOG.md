@@ -19,13 +19,13 @@ _(none currently known — verify by running a user-journey audit)_
   `0.0.0-rc.test` release on the child repo) may never have been run. Confirm a
   `workflow_dispatch` release produces an installable zip that installs in a clean WP and
   lists with the right parent. Remote action — pause for user go-ahead before triggering.
-- [ ] **Confirm the child repo has the `STARTER_THEME_PAT` secret.** The child's
+- [ ] **Confirm the child repo has the `PEDIMENT_THEME_PAT` secret.** The child's
   `ci.yml` phpunit/e2e jobs do a cross-repo checkout of the parent using
-  `secrets.STARTER_THEME_PAT`. If it's unset those jobs fail. Check
+  `secrets.PEDIMENT_THEME_PAT`. If it's unset those jobs fail. Check
   `gh secret list --repo Bergert-Digital/wp-starter-child-theme` and flag to the user if missing.
 - [ ] **Hunt repo-name drift.** Parent remote is `Bergert-Digital/WP-Starter` but
-  `style.css` Theme URI and some docs say `github.com/bergert/wp-starter-theme`. Distribution
-  README/banner links may point at a non-existent `Bergert-Digital/wp-starter-theme`. Audit
+  `style.css` Theme URI and some docs say `github.com/bergert/pediment`. Distribution
+  README/banner links may point at a non-existent `Bergert-Digital/pediment`. Audit
   every cross-repo link and the child `ci.yml` checkout path for consistency; fix dead links.
 - [ ] **Doc-vs-code drift audit (`docs/blocks.md`, `docs/client-blocks.md`,
   `docs/brand-settings.md`).** Spot-check each documented contract against current code:
@@ -48,11 +48,11 @@ _(none currently known — verify by running a user-journey audit)_
   scalable mechanism for the full ~9000-icon Phosphor set — Phosphor webfont, or per-icon
   inline SVG via `@phosphor-icons/core` emitting only icons actually used. Theme-wide:
   touches `inc/icons.php`, build tooling, page weight, every block calling
-  `starter_icon()`. Needs its own brainstorm/spec. Prereq for C. Deferred from the
+  `pediment_icon()`. Needs its own brainstorm/spec. Prereq for C. Deferred from the
   2026-05-19 mega-menu-editor-layout spec (sub-project A).
 - [ ] **Sub-project C — searchable icon picker.** Block-editor picker over the full
   Phosphor catalog (virtualized list + search from B's icon-name manifest), wired into
-  `starter/mega-link`'s `icon` attribute and reusable across blocks. Depends on B; until
+  `pediment/mega-link`'s `icon` attribute and reusable across blocks. Depends on B; until
   then the field is a relocated `TextControl`. Deferred from sub-project A.
 
 ## 🔵 Ideas / later
