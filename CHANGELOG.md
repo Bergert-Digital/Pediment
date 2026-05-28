@@ -140,6 +140,8 @@
 * **pull-quote:** cap testimonial variant to 880px centered ([da146dc](https://github.com/Bergert-Digital/Pediment/commit/da146dc52cf4ffc752db9626d22a4e7a9cbacffd))
 * **pull-quote:** raise testimonial selector specificity for alignwide ([059b61a](https://github.com/Bergert-Digital/Pediment/commit/059b61a5345a9db2a733a8b04f1a89ad8c612ed4))
 * **section-head:** use __experimentalToggleGroupControl alias ([ed5a1f9](https://github.com/Bergert-Digital/Pediment/commit/ed5a1f91af1de8cd05ae15f02f48dcb25ab5cdc1))
+* **seed:** force .htaccess write so seeded pages resolve via CLI ([c7e37a8](https://github.com/Bergert-Digital/Pediment/commit/c7e37a8b991f7669559e68e240a0c37607b9eafb))
+* **seed:** force .htaccess write so seeded pages resolve via CLI ([#7](https://github.com/Bergert-Digital/Pediment/issues/7)) ([972d8ba](https://github.com/Bergert-Digital/Pediment/commit/972d8bac7931fb96b41ae8d4d0d75a150489ae9d))
 * **seed:** move demo assets out of docs/ so they ship in the release ([585566f](https://github.com/Bergert-Digital/Pediment/commit/585566f765fdb346651a1fc5fc2377c37516ad99))
 * **services:** match mockup — head block above grid + Explore arrow ([3f86028](https://github.com/Bergert-Digital/Pediment/commit/3f86028b696a2e6d9618d793965c69b4efe2bbd1))
 * **social-links:** phpcs — indentation + rename $link to avoid WP global ([460e9d3](https://github.com/Bergert-Digital/Pediment/commit/460e9d3d85c6061763628c436351a63ebc4b0bcd))
