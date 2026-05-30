@@ -357,7 +357,31 @@ with:
 			<?php echo pediment_icon( 'arrow-right' ); // phpcs:ignore WordPress.Security.EscapeOutput -- theme-controlled icon markup ?>
 ```
 
-- [ ] **Step 4: Fix the raw `<use>` in `hero/render.php`**
+- [ ] **Step 4: Fix the raw `<use>` in `blog-index/render.php`**
+
+In `src/blocks/blog-index/render.php`, replace the "Read more" arrow (currently line ~101):
+```php
+						<svg class="i" aria-hidden="true" focusable="false"><use href="#ph-arrow-right"></use></svg>
+```
+with:
+```php
+						<?php echo pediment_icon( 'arrow-right' ); // phpcs:ignore WordPress.Security.EscapeOutput -- theme-controlled icon markup ?>
+```
+
+- [ ] **Step 5: Fix the raw `<use>` in `faq-item/render.php`**
+
+In `src/blocks/faq-item/render.php`, replace the caret inside the `<summary>` toggle (currently line ~22, in an HTML region after the `ob_start(); ?>`):
+```php
+			<svg class="i" aria-hidden="true" focusable="false"><use href="#ph-caret-down"></use></svg>
+```
+with:
+```php
+			<?php echo pediment_icon( 'caret-down' ); // phpcs:ignore WordPress.Security.EscapeOutput -- theme-controlled icon markup ?>
+```
+
+> `FaqTest.php` has no icon assertion, so no test change is needed here — this is a render-only fix to avoid a broken caret once the sprite is gone.
+
+- [ ] **Step 6: Fix the raw `<use>` in `hero/render.php`**
 
 In `src/blocks/hero/render.php`, replace the tick icon (currently line ~61):
 ```php
@@ -368,7 +392,7 @@ with:
 <?php echo pediment_icon( 'check-circle', 'starter-hero__tick-icon' ); // phpcs:ignore WordPress.Security.EscapeOutput -- theme-controlled icon markup ?>
 ```
 
-> Note: the old hero tick used class `starter-hero__tick-icon` directly on the `<svg>`. `pediment_icon()` emits `class="i starter-hero__tick-icon"`. If `assets/css/theme.css` styles `.starter-hero__tick-icon` as the svg, the rule still matches (the class is present). Verify visually in Step 7; adjust the CSS selector only if the icon sizing regresses.
+> Note: the old hero tick used class `starter-hero__tick-icon` directly on the `<svg>`. `pediment_icon()` emits `class="i starter-hero__tick-icon"`. If `assets/css/theme.css` styles `.starter-hero__tick-icon` as the svg, the rule still matches (the class is present). Verify visually in Task 9; adjust the CSS selector only if the icon sizing regresses.
 
 - [ ] **Step 7: Confirm no raw `#ph-` references remain in PHP renders**
 
