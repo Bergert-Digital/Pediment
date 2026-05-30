@@ -33,6 +33,8 @@ Two implementation details refine the approved spec; this plan is authoritative 
 | `src/components/icon-picker/index.tsx` | **new** — `<IconPicker>` React component |
 | `src/blocks/feature/edit.tsx` | swap `TextControl` → `<IconPicker>`; inline canvas preview |
 | `src/blocks/feature/render.php` | switch the "more" link's raw `<use>` arrow to `pediment_icon()` |
+| `src/blocks/blog-index/render.php` | switch the "Read more" raw `<use>` arrow to `pediment_icon()` |
+| `src/blocks/faq-item/render.php` | switch the raw `<use>` caret to `pediment_icon()` |
 | `src/blocks/feature/block.json` | drop `enum`; clean `description` |
 | `src/blocks/mega-menu/edit.tsx` | swap per-column `TextControl` → `<IconPicker>`; drop stale help text; inline preview |
 | `src/blocks/hero/render.php` | switch raw `<use href="#ph-check-circle">` to `pediment_icon()` |
@@ -287,10 +289,12 @@ git commit -m "feat(icons): render icons inline from generated map; drop sprite 
 
 ## Task 3: Switch raw `#ph-` consumers to `pediment_icon()` and update render tests
 
-The sprite is gone after Task 2, so the two render templates that still hardcode `<use href="#ph-…">` would render broken icons. Fix them, and update the render tests that assert the old `#ph-` markup.
+The sprite is gone after Task 2, so every render template that still hardcodes `<use href="#ph-…">` would render broken icons. There are **four** such raw sites (not counting `*/edit.tsx`, handled in Tasks 7–8): `feature/render.php`, `hero/render.php`, `blog-index/render.php`, and `faq-item/render.php`. Fix all four, and update the render tests that assert the old `#ph-` markup.
+
+> Icons that already go through `pediment_icon()` — feature-grid feature icons, mega-menu column icons — need **no render change**; only their test assertions change (from `#ph-…`/`<use>` to `data-icon`). The four raw `<use>` sites above are the actual render fixes.
 
 **Files:**
-- Modify: `src/blocks/feature/render.php`, `src/blocks/hero/render.php`
+- Modify: `src/blocks/feature/render.php`, `src/blocks/hero/render.php`, `src/blocks/blog-index/render.php`, `src/blocks/faq-item/render.php`
 - Test: `tests/phpunit/BlockRender/FeatureGridTest.php`, `tests/phpunit/BlockRender/BlogIndexTest.php`, `tests/phpunit/BlockRender/MegaMenuTest.php`
 
 - [ ] **Step 1: Update the render tests to assert `data-icon`**
@@ -366,28 +370,28 @@ with:
 
 > Note: the old hero tick used class `starter-hero__tick-icon` directly on the `<svg>`. `pediment_icon()` emits `class="i starter-hero__tick-icon"`. If `assets/css/theme.css` styles `.starter-hero__tick-icon` as the svg, the rule still matches (the class is present). Verify visually in Step 7; adjust the CSS selector only if the icon sizing regresses.
 
-- [ ] **Step 5: Confirm no raw `#ph-` references remain in PHP renders**
+- [ ] **Step 7: Confirm no raw `#ph-` references remain in PHP renders**
 
-Run: `grep -rn '#ph-' src/blocks/ inc/ || echo "none remaining"`
-Expected: `none remaining` (the only remaining `#ph-` will be in `src/blocks/feature/edit.tsx`, handled in Task 6).
+Run: `grep -rn '#ph-' src/blocks/ inc/ --include='*.php' || echo "none remaining"`
+Expected: `none remaining`. (Raw `#ph-` still exists in `src/blocks/feature/edit.tsx` and `src/blocks/mega-menu/edit.tsx` — the editor previews, handled in Tasks 7 and 8. The `--include='*.php'` flag scopes this check to render templates.)
 
-- [ ] **Step 6: Run the render tests to verify they pass**
+- [ ] **Step 8: Run the render tests to verify they pass**
 
 Run:
 ```bash
-npx wp-env run tests-wordpress --env-cwd=wp-content/themes/pediment vendor/bin/phpunit --filter 'FeatureGridTest|BlogIndexTest|MegaMenuTest|HeroTest'
+npx wp-env run tests-wordpress --env-cwd=wp-content/themes/pediment vendor/bin/phpunit --filter 'FeatureGridTest|BlogIndexTest|MegaMenuTest|HeroTest|FaqTest'
 ```
 Expected: PASS.
 
-- [ ] **Step 7: Run the full PHP suite to catch any other icon assertions**
+- [ ] **Step 9: Run the full PHP suite to catch any other icon assertions**
 
 Run: `npx wp-env run tests-wordpress --env-cwd=wp-content/themes/pediment vendor/bin/phpunit`
 Expected: PASS. If any other test asserts `#ph-` or `<symbol`/`<use>`, update it to the `data-icon` form the same way (search: `grep -rn '#ph-\|<use\|<symbol' tests/phpunit/`).
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add src/blocks/feature/render.php src/blocks/hero/render.php tests/phpunit/
+git add src/blocks/feature/render.php src/blocks/hero/render.php src/blocks/blog-index/render.php src/blocks/faq-item/render.php tests/phpunit/
 git commit -m "fix(icons): route remaining icon output through pediment_icon()"
 ```
 
