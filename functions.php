@@ -28,6 +28,13 @@ require_once __DIR__ . '/inc/nav-active.php';
 require_once __DIR__ . '/inc/nav-seed.php';
 require_once __DIR__ . '/inc/mega-menu.php';
 
+// One-click theme updates from GitHub Releases (no manual zip uploads).
+if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
+	require_once __DIR__ . '/vendor/autoload.php';
+}
+require_once __DIR__ . '/inc/ThemeUpdater.php';
+\Pediment\ThemeUpdater::register();
+
 add_action(
 	'wp_enqueue_scripts',
 	function () {
