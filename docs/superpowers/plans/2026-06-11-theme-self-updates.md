@@ -97,6 +97,8 @@ Create `inc/ThemeUpdater.php` with exactly this content. Note `get_template_dire
  * @package Pediment
  */
 
+declare(strict_types=1);
+
 namespace Pediment;
 
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
@@ -176,12 +178,13 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
 }
 require_once __DIR__ . '/inc/ThemeUpdater.php';
-if ( is_admin() ) {
-	\Pediment\ThemeUpdater::register();
-}
+\Pediment\ThemeUpdater::register();
 ```
 
-(`is_admin()` guard: update checks only run in wp-admin, matching how WP surfaces updates and avoiding front-end overhead.)
+(Register unconditionally — matching the `pediment-ai` plugin. PUC's Scheduler self-limits the
+expensive remote check to cron + specific admin pages, so calling `register()` on every load is
+cheap. Do **not** wrap it in `is_admin()`: that runs false during WP-Cron and WP-CLI, which would
+silently break background auto-updates and `wp theme update`.)
 
 - [ ] **Step 2: Add the `Update URI` header to `style.css`**
 
@@ -334,6 +337,8 @@ Create `inc/ThemeUpdater.php`. This differs from the parent in: namespace, repo 
  * @package PedimentChild
  */
 
+declare(strict_types=1);
+
 namespace PedimentChild;
 
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
@@ -414,10 +419,11 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
 }
 require_once __DIR__ . '/inc/ThemeUpdater.php';
-if ( is_admin() ) {
-	\PedimentChild\ThemeUpdater::register();
-}
+\PedimentChild\ThemeUpdater::register();
 ```
+
+(Register unconditionally — see the parent Task A3 note: do **not** wrap in `is_admin()`, it breaks
+WP-Cron auto-updates and `wp theme update`.)
 
 - [ ] **Step 2: Add the `Update URI` header to `style.css`**
 
