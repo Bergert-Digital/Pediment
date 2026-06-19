@@ -115,17 +115,37 @@ text.
 
 ## Styling (`style.scss` per block, `starter-*` BEM)
 
-- `.starter-slider`: positioning context for arrows/dots; `--r-panel` rounding.
-- `.starter-slider__track`: slides stacked in the same grid cell; only
-  `.starter-slide.is-active` is visible. Fade via `opacity`/`visibility`
-  transition.
+The slider is a single rounded, shadowed card; the image and panel are full-bleed
+halves clipped to that rounding (image full-bleed cover, square inner seam meeting
+the panel, outer corners following the card).
+
+- `.starter-slider`: un-clipped outer wrapper — positioning context for the
+  overlaid arrows and the dots row below the card. No rounding/overflow itself.
+- `.starter-slider__track`: the **card** — slides stacked in the same grid cell;
+  only `.starter-slide.is-active` is visible (fade via `opacity`/`visibility`).
+  Carries the **`--r-panel` rounding + `box-shadow: var(--wp--preset--shadow--medium)`**
+  and `overflow: hidden` so the full-bleed image and panel clip to the rounded
+  corners.
 - `.starter-slide`: `display: grid; grid-template-columns: 1fr 1fr;
-  align-items: center`. `.is-media-left` / `.is-media-right` on the parent control
-  image `order`. Panel uses `var(--slide-panel-bg)` / `var(--slide-panel-fg)`.
+  align-items: stretch` (both halves full height). `.is-media-left` /
+  `.is-media-right` on the parent control image `order`. Panel uses
+  `var(--slide-panel-bg)` / `var(--slide-panel-fg)`.
+- `.starter-slide__media`: full-bleed — `margin: 0`, fills its half.
+- `.starter-slide__img`: `width: 100%; height: 100%; object-fit: cover` with a
+  fixed `aspect-ratio` (e.g. `4 / 3`) on the media column, so every slide is the
+  **same height** and the carousel doesn't jump when slides swap. **No** per-image
+  border-radius or shadow (the rounding/shadow live on the slider shell). The
+  `media-text` SVG placeholder fills the same area when no image is set.
+- `.starter-slide__panel`: padded (`--r-panel`-scale padding like `cta`), content
+  vertically centered.
 - Responsive: collapse to single column under 781px (image first), matching
-  `media-text`.
+  `media-text`; the fixed media aspect ratio keeps the stacked image height sane.
 - Arrows: pill/circle buttons using theme tokens; `:focus-visible` outline.
-- Dots: small round buttons; active dot filled with accent.
+  Absolutely positioned on `.starter-slider` (the un-clipped wrapper), vertically
+  centered, overlaid near the card's left/right edges — so they're never clipped by
+  the card's `overflow: hidden`.
+- Dots: small round buttons centered in a row below the card; active dot filled
+  with accent.
 - **No color literals** — only theme presets / CSS vars (satisfies `lint:colors`).
 
 ## Interactivity (`slider/view.ts`, WordPress Interactivity API)
