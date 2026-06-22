@@ -3,7 +3,6 @@
  * Server-side render for pediment/slider.
  *
  * @var array    $attributes
- * @var string   $content    Pre-rendered inner blocks (the slides).
  * @var WP_Block $block
  */
 
@@ -34,20 +33,12 @@ if ( ! function_exists( 'pediment_slider_panel_fg' ) ) {
 }
 
 $position = ( isset( $attributes['mediaPosition'] ) && 'right' === $attributes['mediaPosition'] ) ? 'right' : 'left';
-$bg       = isset( $attributes['panelColor'] ) ? (string) $attributes['panelColor'] : 'var(--wp--preset--color--primary)';
-
-/**
- * Pick a readable foreground token for a panel background. Parses a #hex color,
- * computes relative luminance, and returns the surface (light) token for dark
- * backgrounds or the foreground (dark) token for light backgrounds. Falls back
- * to the light token for non-hex / unparseable values.
- */
-$fg = pediment_slider_panel_fg( $bg );
-
-// Count slides from the parsed inner block list.
-$count = is_object( $block ) && ! empty( $block->parsed_block['innerBlocks'] )
-	? count( $block->parsed_block['innerBlocks'] )
-	: 0;
+$bg       = ( isset( $attributes['panelColor'] ) && '' !== $attributes['panelColor'] )
+	? (string) $attributes['panelColor']
+	: 'var(--wp--preset--color--primary)';
+$fg       = pediment_slider_panel_fg( $bg );
+$slides   = ( isset( $attributes['slides'] ) && is_array( $attributes['slides'] ) ) ? $attributes['slides'] : array();
+$count    = count( $slides );
 
 $style   = sprintf( '--slide-panel-bg:%s;--slide-panel-fg:%s;', esc_attr( $bg ), esc_attr( $fg ) );
 $wrapper = get_block_wrapper_attributes(
@@ -74,7 +65,62 @@ ob_start();
 	data-wp-on--keydown="actions.onKeydown"
 	role="group" aria-roledescription="carousel" tabindex="-1">
 	<div class="starter-slider__track">
-		<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput -- inner blocks pre-rendered ?>
+		<?php
+		foreach ( $slides as $slide ) :
+			$media_id     = isset( $slide['mediaId'] ) ? (int) $slide['mediaId'] : 0;
+			$alt_override = isset( $slide['altOverride'] ) ? (string) $slide['altOverride'] : '';
+			$eyebrow      = isset( $slide['eyebrow'] ) ? (string) $slide['eyebrow'] : '';
+			$heading      = isset( $slide['heading'] ) ? (string) $slide['heading'] : '';
+			$body         = isset( $slide['body'] ) ? (string) $slide['body'] : '';
+			$btn_text     = isset( $slide['buttonText'] ) ? (string) $slide['buttonText'] : '';
+			$btn_url      = isset( $slide['buttonUrl'] ) ? (string) $slide['buttonUrl'] : '';
+
+			$img_html = '';
+			if ( $media_id ) {
+				$alt      = '' !== $alt_override ? $alt_override : (string) get_post_meta( $media_id, '_wp_attachment_image_alt', true );
+				$img_html = wp_get_attachment_image(
+					$media_id,
+					'large',
+					false,
+					array(
+						'alt'   => $alt,
+						'class' => 'starter-slide__img',
+					)
+				);
+			}
+			?>
+			<div class="starter-slide">
+				<figure class="starter-slide__media">
+					<?php if ( '' !== $img_html ) : ?>
+						<?php echo $img_html; // phpcs:ignore WordPress.Security.EscapeOutput -- pre-escaped by wp_get_attachment_image ?>
+					<?php else : ?>
+						<span class="starter-slide__placeholder" aria-hidden="true">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="3" y="3" width="18" height="18" rx="2" />
+								<circle cx="8.5" cy="8.5" r="1.5" />
+								<path d="M21 15l-5-5L5 21" />
+							</svg>
+						</span>
+					<?php endif; ?>
+				</figure>
+				<div class="starter-slide__panel">
+					<?php if ( '' !== $eyebrow ) : ?>
+						<p class="starter-slide__eyebrow"><?php echo esc_html( $eyebrow ); ?></p>
+					<?php endif; ?>
+					<?php if ( '' !== $heading ) : ?>
+						<h2 class="starter-slide__heading"><?php echo esc_html( $heading ); ?></h2>
+					<?php endif; ?>
+					<?php if ( '' !== $body ) : ?>
+						<p class="starter-slide__body"><?php echo nl2br( esc_html( $body ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- esc_html escaped; nl2br only inserts <br /> ?></p>
+					<?php endif; ?>
+					<?php if ( '' !== $btn_text && '' !== $btn_url ) : ?>
+						<a class="starter-slide__button" href="<?php echo esc_url( $btn_url ); ?>"><?php echo esc_html( $btn_text ); ?></a>
+					<?php endif; ?>
+				</div>
+			</div>
+			<?php
+		endforeach;
+		?>
 	</div>
 	<?php if ( $count > 1 ) : ?>
 	<button type="button" class="starter-slider__arrow starter-slider__arrow--prev" aria-label="<?php esc_attr_e( 'Vorherige Folie', 'pediment' ); ?>" data-wp-on--click="actions.prev">

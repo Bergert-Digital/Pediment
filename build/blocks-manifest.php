@@ -748,44 +748,13 @@ return array(
 		'style' => 'file:./style-index.css',
 		'render' => 'file:./render.php'
 	),
-	'slide' => array(
-		'$schema' => 'https://schemas.wp.org/trunk/block.json',
-		'apiVersion' => 3,
-		'name' => 'pediment/slide',
-		'title' => 'Slide',
-		'category' => 'pediment',
-		'description' => 'A single slide: a full-bleed image beside a colored content panel. Used inside a Slider.',
-		'parent' => array(
-			'pediment/slider'
-		),
-		'textdomain' => 'pediment',
-		'supports' => array(
-			'html' => false,
-			'inserter' => false,
-			'reusable' => false
-		),
-		'attributes' => array(
-			'mediaId' => array(
-				'type' => 'number',
-				'default' => 0
-			),
-			'altOverride' => array(
-				'type' => 'string',
-				'default' => ''
-			)
-		),
-		'editorScript' => 'file:./index.js',
-		'editorStyle' => 'file:./style-index.css',
-		'style' => 'file:./style-index.css',
-		'render' => 'file:./render.php'
-	),
 	'slider' => array(
 		'$schema' => 'https://schemas.wp.org/trunk/block.json',
 		'apiVersion' => 3,
 		'name' => 'pediment/slider',
 		'title' => 'Slider',
 		'category' => 'pediment',
-		'description' => 'An image/content slider: one slide at a time, each pairing a full-bleed image with a colored content panel. Contains Slide child blocks.',
+		'description' => 'An image/content slider: one slide at a time, each pairing a full-bleed image with a colored content panel. Slides are managed in the block settings sidebar.',
 		'textdomain' => 'pediment',
 		'supports' => array(
 			'html' => false,
@@ -802,44 +771,26 @@ return array(
 			'panelColor' => array(
 				'type' => 'string',
 				'default' => '#0A1B33'
+			),
+			'slides' => array(
+				'type' => 'array',
+				'default' => array(
+					
+				)
 			)
 		),
 		'example' => array(
-			'innerBlocks' => array(
-				array(
-					'name' => 'pediment/slide',
-					'innerBlocks' => array(
-						array(
-							'name' => 'core/heading',
-							'attributes' => array(
-								'level' => 2,
-								'content' => 'Lebenslanges Lernen'
-							)
-						),
-						array(
-							'name' => 'core/paragraph',
-							'attributes' => array(
-								'content' => 'Wir bringen unser eigenes Organismus immer auf den neuesten Stand.'
-							)
-						)
-					)
-				),
-				array(
-					'name' => 'pediment/slide',
-					'innerBlocks' => array(
-						array(
-							'name' => 'core/heading',
-							'attributes' => array(
-								'level' => 2,
-								'content' => 'Gemeinsam wachsen'
-							)
-						),
-						array(
-							'name' => 'core/paragraph',
-							'attributes' => array(
-								'content' => 'Tägliche Team-Updates und ein intensiver Austausch.'
-							)
-						)
+			'attributes' => array(
+				'slides' => array(
+					array(
+						'eyebrow' => 'Lernen',
+						'heading' => 'Lebenslanges Lernen',
+						'body' => 'Wir bringen unser Organismus immer auf den neuesten Stand.'
+					),
+					array(
+						'eyebrow' => 'Wachsen',
+						'heading' => 'Gemeinsam wachsen',
+						'body' => 'Tägliche Team-Updates und ein intensiver Austausch.'
 					)
 				)
 			),
