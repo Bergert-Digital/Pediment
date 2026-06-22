@@ -3,10 +3,17 @@ import { createPageWithContent, deletePageBySlug } from './utils';
 
 const SLUG = 'e2e-slider';
 
-const SLIDE = ( n: number ) =>
-	`<!-- wp:pediment/slide --><!-- wp:heading --><h2>Slide ${ n }</h2><!-- /wp:heading --><!-- wp:paragraph --><p>Body ${ n }</p><!-- /wp:paragraph --><!-- /wp:pediment/slide -->`;
+const slideObj = ( n: number ) => ( {
+	heading: `Slide ${ n }`,
+	body: `Body ${ n }`,
+} );
 
-const MARKUP = `<!-- wp:pediment/slider -->${ SLIDE( 1 ) }${ SLIDE( 2 ) }${ SLIDE( 3 ) }<!-- /wp:pediment/slider -->`;
+const sliderMarkup = (
+	slides: Array< Record< string, unknown > >,
+	attrs: Record< string, unknown > = {}
+) => `<!-- wp:pediment/slider ${ JSON.stringify( { ...attrs, slides } ) } /-->`;
+
+const MARKUP = sliderMarkup( [ slideObj( 1 ), slideObj( 2 ), slideObj( 3 ) ] );
 
 const slider = ( page: Page ) => page.locator( '.starter-slider' );
 const activeHeading = ( page: Page ) =>
@@ -99,9 +106,10 @@ test.describe( 'image/content slider', () => {
 	test( 'panel color and image side apply on the front end', async ( {
 		page,
 	} ) => {
-		const markup = `<!-- wp:pediment/slider {"mediaPosition":"right","panelColor":"#0E7490"} -->${ SLIDE(
-			1
-		) }${ SLIDE( 2 ) }<!-- /wp:pediment/slider -->`;
+		const markup = sliderMarkup(
+			[ slideObj( 1 ), slideObj( 2 ) ],
+			{ mediaPosition: 'right', panelColor: '#0E7490' }
+		);
 		const url = createPageWithContent( SLUG + '-color', 'Slider', markup );
 		await page.goto( url );
 
