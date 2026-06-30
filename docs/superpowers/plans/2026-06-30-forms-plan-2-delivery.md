@@ -912,7 +912,9 @@ class DestinationsTest extends WP_UnitTestCase {
 		update_option( PEDIMENT_FORM_DEFAULT_DEST_OPTION, 'brevo_main' );
 		$this->assertSame( 'brevo_main', pediment_form_resolve_destination_id( '' ) );
 		$this->assertSame( 'brevo_main', pediment_form_resolve_destination_id( 'does_not_exist' ) );
-		$this->assertSame( '', pediment_form_resolve_destination_id( '' ) ?: '' ); // sanity: still string
+
+		delete_option( PEDIMENT_FORM_DEFAULT_DEST_OPTION );
+		$this->assertSame( '', pediment_form_resolve_destination_id( '' ) );
 	}
 }
 ```
